@@ -3,10 +3,13 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	_ "github.com/lib/pq"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
@@ -48,6 +51,30 @@ func getProducts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(products)
 }
+func getProduct(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	idStr := strings.TrimPrefix(r.URL.Path, "/products/")
+	if idStr == "" {
+		http.NotFound(w, r)
+		return
+	}
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	var p Product
+	err = db.QueryRow("SELECT * FROM products WHERE id = $1", id).Scan(&p.ID, &p.Name, &p.Description, &p.Price, &p.CreatedAt)
+	if err == sql.ErrNoRows {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
 func main() {
 	var err error
 
@@ -66,6 +93,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/products", getProducts)
+	mux.HandleFunc("/products/", getProduct)
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))

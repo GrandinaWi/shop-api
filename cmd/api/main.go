@@ -58,6 +58,24 @@ func getProductHandle(w http.ResponseWriter, r *http.Request, repo products.Repo
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"product": prod})
 }
+func searchProductsHandle(w http.ResponseWriter, r *http.Request, repo products.Repository) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		http.Error(w, "Query parameter is required", http.StatusBadRequest)
+		return
+	}
+	products, err := repo.Search(r.Context(), q)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"products": products})
+}
 func main() {
 	var err error
 
@@ -81,7 +99,9 @@ func main() {
 	mux.HandleFunc("/products/", func(w http.ResponseWriter, r *http.Request) {
 		getProductHandle(w, r, productsRepo)
 	})
-
+	mux.HandleFunc("/products/search", func(w http.ResponseWriter, r *http.Request) {
+		searchProductsHandle(w, r, productsRepo)
+	})
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }

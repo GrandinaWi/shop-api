@@ -1,6 +1,7 @@
 package main
 
 import (
+	"CatalogItems/internal/products"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -22,36 +23,20 @@ type Product struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
-func getProducts(w http.ResponseWriter, r *http.Request) {
+func getProductsHandle(w http.ResponseWriter, r *http.Request, repo products.Repository) {
 
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	rows, err := db.Query("SELECT * FROM products")
+	p, err := repo.GetAll(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	defer rows.Close()
-	var products []Product
-	for rows.Next() {
-		var p Product
-		if err := rows.Scan(
-			&p.ID,
-			&p.Name,
-			&p.Description,
-			&p.Price,
-			&p.CreatedAt,
-		); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		products = append(products, p)
-	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(products)
+	json.NewEncoder(w).Encode(map[string]any{"products": p})
 }
-func getProduct(w http.ResponseWriter, r *http.Request) {
+func getProductHandle(w http.ResponseWriter, r *http.Request, repo products.Repository) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -66,14 +51,12 @@ func getProduct(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	var p Product
-	err = db.QueryRow("SELECT * FROM products WHERE id = $1", id).Scan(&p.ID, &p.Name, &p.Description, &p.Price, &p.CreatedAt)
-	if err == sql.ErrNoRows {
-		http.NotFound(w, r)
-		return
+	prod, err := repo.GetProduct(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(p)
+	json.NewEncoder(w).Encode(map[string]any{"product": prod})
 }
 func main() {
 	var err error
@@ -88,12 +71,16 @@ func main() {
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
-
+	productsRepo := products.NewPostgresRepository(db)
 	log.Println("Connected to postgres")
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/products", getProducts)
-	mux.HandleFunc("/products/", getProduct)
+	mux.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
+		getProductsHandle(w, r, productsRepo)
+	})
+	mux.HandleFunc("/products/", func(w http.ResponseWriter, r *http.Request) {
+		getProductHandle(w, r, productsRepo)
+	})
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))

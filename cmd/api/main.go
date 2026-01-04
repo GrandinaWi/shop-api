@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+
 	a, err := app.NewApp()
 	if err != nil {
 		log.Fatal(err)

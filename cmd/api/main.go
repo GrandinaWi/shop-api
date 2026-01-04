@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -79,7 +81,8 @@ func searchProductsHandle(w http.ResponseWriter, r *http.Request, repo products.
 func main() {
 	var err error
 
-	dsn := "postgres://shop:shop@localhost:5432/postgresshop?sslmode=disable"
+	_ = godotenv.Load(".env")
+	dsn := os.Getenv("DATABASE_URL")
 
 	db, err = sql.Open("postgres", dsn)
 	if err != nil {

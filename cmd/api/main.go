@@ -3,13 +3,11 @@ package main
 import (
 	"CatalogItems/internal/products/app"
 	"context"
-	"database/sql"
 	"log"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -17,10 +15,6 @@ func main() {
 
 	var err error
 
-	_ = godotenv.Load(".env")
-	dsn := os.Getenv("DATABASE_URL")
-
-	db, err = sql.Open("postgres", dsn)
 	a, err := app.NewApp()
 
 	if err != nil {

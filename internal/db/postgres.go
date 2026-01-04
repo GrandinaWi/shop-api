@@ -1,9 +1,15 @@
 package db
 
-import "database/sql"
+import (
+	"database/sql"
+	"os"
+
+	"github.com/joho/godotenv"
+)
 
 func NewPostgresDB() (*sql.DB, error) {
-	dsn := "postgres://shop:shop@localhost:5432/postgresshop?sslmode=disable"
+	_ = godotenv.Load(".env")
+	dsn := os.Getenv("DATABASE_URL")
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err

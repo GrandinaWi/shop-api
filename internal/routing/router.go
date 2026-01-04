@@ -1,22 +1,17 @@
-package http
+package routing
 
 import (
 	"CatalogItems/internal/products"
+	"fmt"
 	"net/http"
 )
 
 func NewRouter(productsSvc products.Service) http.Handler {
 	mux := http.NewServeMux()
-
-	mux.HandleFunc("/products/search", func(w http.ResponseWriter, r *http.Request) {
-		searchProductsHandle(w, r, productsSvc)
-	})
-	mux.HandleFunc("/products/", func(w http.ResponseWriter, r *http.Request) {
-		getProductHandle(w, r, productsSvc)
-	})
-	mux.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
-		getProductsHandle(w, r, productsSvc)
-	})
+	fmt.Println("Start routing")
+	mux.Handle("/products/search", products.SearchProducts(productsSvc))
+	mux.Handle("/products/", products.GetProduct(productsSvc))
+	mux.Handle("/products", products.GetProducts(productsSvc))
 
 	return mux
 }
